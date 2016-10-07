@@ -9,8 +9,15 @@ WORDS = {
         
 def read_file()
   full_string = ""
-  File.foreach(FILENAME) { |x| full_string << x }
-  full_string
+  File.foreach(FILENAME) do |x|
+    # now do string substitution
+   # p "%{foo} == %{foo}" % {:foo => "bar" }
+  puts format(x,  noun:   WORDS[:noun].sample,
+                  adj:    WORDS[:adj].sample,
+                  verb:   WORDS[:verb].sample,
+                  adverb: WORDS[:adverb].sample)
+  
+  end
 end
 
 def modify_story(full_string)
@@ -28,4 +35,4 @@ end
 
 
 full_string = read_file()
-print modify_story(full_string)
+#print modify_story(full_string)
