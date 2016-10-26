@@ -2,12 +2,11 @@
 def egyptian(fraction)
   result = []
   fraction.numerator == 1 ? denom = fraction.denominator + 1 : denom = 1
-  original_total = fraction
   
   loop do
     denom, fraction = next_fraction(fraction, denom)
     result << denom
-    break if result.inject(0) {|sum, n| sum + Rational(1, n) } == original_total
+    break if fraction == 0
     denom += 1
   end
   result
