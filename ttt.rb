@@ -61,7 +61,7 @@ module AIMoveLogic
   def choose_best_move(possible_moves)
     return CENTER_SQUARE if possible_moves.include?(CENTER_SQUARE)
     return (possible_moves & CORNER_SQUARES).sample \
-      if !(possible_moves & CORNER_SQUARES).empty!
+      if !(possible_moves & CORNER_SQUARES).empty?
     possible_moves.sample
   end
 
@@ -193,7 +193,7 @@ class TTTGame
     @board = Board.new
     display_welcome_message
     assign_human_marker
-    @first_to_move = computer_marker
+    @first_to_move = human_marker
     @human = Player.new(human_marker, human_name)
     @computer = Player.new(computer_marker, COMPUTER_NAME_OPTIONS.sample)
     @current_marker = @first_to_move
@@ -283,13 +283,13 @@ class TTTGame
   end
 
   def display_score
-    puts "#{human.name}, you have won #{@games_won[:human]} games. \
-      #{computer.name} has won #{@games_won[:computer]} games."
+    puts "#{human.name}, you have won #{@games_won[:human]} games. "\
+         "#{computer.name} has won #{@games_won[:computer]} games."
   end
 
   def display_board
-    puts "#{human.name}, you are a #{human.marker} and \
-      #{computer.name} is a #{computer.marker}"
+    puts "#{human.name}, you are an #{human.marker} and "\
+         "#{computer.name} is an #{computer.marker}"
     display_score
     puts ""
     board.draw
