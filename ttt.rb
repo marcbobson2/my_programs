@@ -1,40 +1,31 @@
 require 'pry'
 
 module AIMoveLogic
-  WIN_LINES_PER_SQUARE = { 1 => [[2, 3], [4, 7], [5, 9]],
-                           2 => [[1, 3], [5, 8]],
-                           3 => [[1, 2], [5, 7], [6, 9]],
-                           4 => [[1, 7], [5, 6]],
-                           5 => [[1, 9], [2, 8], [4, 6], [7, 3]],
-                           6 => [[3, 9], [4, 5]],
-                           7 => [[1, 4], [3, 5], [8, 9]],
-                           8 => [[2, 5], [7, 9]],
-                           9 => [[1, 5], [3, 6], [7, 8]] }.freeze
-
   CENTER_SQUARE = 5
   CORNER_SQUARES = [1, 3, 7, 9].freeze
+  PROMISING_WIN_LINES = [2, 1].freeze
 
   def find_best_move(computer_marker, human_marker)
-    [computer_marker, human_marker].each do |marker|
-      key = must_do_move?(marker)
-      return key if key
-    end
+    winning_move = check_for_winning_move(computer_marker)
+    return winning_move if winning_move
 
-    [computer_marker, human_marker].each do |marker|
-      key = attack_or_defend?(marker)
-      return key if key
-    end
+    defend_against_winning_move = check_for_winning_move(human_marker)
+    return defend_against_winning_move if defend_against_winning_move
 
-    return CENTER_SQUARE if @squares[CENTER_SQUARE].marker \
-      == Square::INITIAL_MARKER
-    unmarked_keys.sample
+    make_attacking_move = attack_or_defend?(computer_marker)
+    return make_attacking_move if make_attacking_move
+
+    make_defensive_move = attack_or_defend?(human_marker)
+    return make_defensive_move if make_defensive_move
+
+    choose_best_move_from_set(unmarked_keys)
   end
 
   private
 
-  def must_do_move?(marker)
+  def check_for_winning_move(marker)
     unmarked_keys.each do |key|
-      WIN_LINES_PER_SQUARE[key].each do |win_line|
+      identify_all_win_lines_per_square(key).each do |win_line|
         return key if winning_move?(win_line, marker)
       end
     end
@@ -46,39 +37,64 @@ module AIMoveLogic
       @squares[win_line[1]].marker == marker
   end
 
+  def choose_best_move_from_set(possible_moves)
+    return CENTER_SQUARE if possible_moves.include?(CENTER_SQUARE)
+
+    return (possible_moves & CORNER_SQUARES).sample \
+      if !(possible_moves & CORNER_SQUARES).empty?
+
+    possible_moves.sample
+  end
+
+  def identify_all_win_lines_per_square(square)
+    win_lines_dup = Board::WINNING_LINES.map(&:dup)
+    win_lines_per_square =
+      identify_each_win_line_per_square(win_lines_dup, square)
+    remove_active_square_from_win_line_array(win_lines_per_square, square)
+  end
+
+  def identify_each_win_line_per_square(win_lines_dup, square)
+    win_lines_per_square = []
+    win_lines_dup.each do |win_line|
+      win_lines_per_square << win_line if win_line.include?(square)
+    end
+    win_lines_per_square
+  end
+
+  def remove_active_square_from_win_line_array(win_lines_per_square, square)
+    win_lines_per_square.each { |line| line.delete(square) }
+  end
+
   def attack_or_defend?(marker)
-    [2, 1].each do |lines_to_eval|
-      possible_moves = []
+    PROMISING_WIN_LINES.each do |promising_win_line|
+      set_of_possible_moves = []
       unmarked_keys.each do |key|
-        possible_moves << key \
-          if line_win?(WIN_LINES_PER_SQUARE[key], marker, lines_to_eval)
+        set_of_possible_moves << key \
+          if win_line_meets_criteria?(identify_all_win_lines_per_square(key), \
+                                      marker, promising_win_line)
       end
-      return choose_best_move(possible_moves) if !possible_moves.empty?
+      return choose_best_move_from_set(set_of_possible_moves) \
+        if !set_of_possible_moves.empty?
     end
     false
   end
 
-  def choose_best_move(possible_moves)
-    return CENTER_SQUARE if possible_moves.include?(CENTER_SQUARE)
-    return (possible_moves & CORNER_SQUARES).sample \
-      if !(possible_moves & CORNER_SQUARES).empty?
-    possible_moves.sample
-  end
-
-  def line_win?(win_lines, marker, required_lines)
+  def win_line_meets_criteria?(win_lines, marker, required_lines)
     valid_lines = 0
     win_lines.each do |win_line|
-      valid_lines += 1 if one_occupied_square?(win_line, marker)
+      valid_lines += 1 \
+        if markers_per_win_line(win_line, marker).positive? && \
+           markers_per_win_line(win_line, Square::INITIAL_MARKER).zero?
     end
     valid_lines >= required_lines
   end
 
-  def one_occupied_square?(win_line, marker)
-    markers_in_line = []
-    markers_in_line << @squares[win_line[0]].marker \
-      << @squares[win_line[1]].marker
-    markers_in_line.count(marker) == 1 && \
-      markers_in_line.count(Square::INITIAL_MARKER) == 1
+  def markers_per_win_line(win_line, marker_type)
+    marker_count = 0
+    win_line.each do |square_key|
+      marker_count += 1 if @squares[square_key].marker == marker_type
+    end
+    marker_count
   end
 end
 
@@ -174,16 +190,89 @@ end
 class Player
   attr_reader :marker, :name
 
-  def initialize(marker, name)
-    @marker = marker
-    @name = name
+  def initialize
+  end
+end
+
+class Human < Player
+  def initialize
+    set_name
+    choose_marker
+  end
+
+  def set_name
+    loop do
+      puts "Please enter your name:"
+      @name = gets.chomp.to_s
+      break if !@name.empty?
+      puts "You must enter at least 1 character!"
+    end
+  end
+
+  def choose_marker
+    @marker = nil
+    loop do
+      puts "Enter any single-character marker you want:"
+      @marker = gets.chomp.to_s
+      break if valid_marker?(@marker)
+      puts "Your marker must be a single character, and not a space."
+    end
+  end
+
+  def valid_marker?(marker)
+    marker.size == 1 && marker != " "
+  end
+
+  def move(board)
+    puts "Choose a square (#{joinor(board.unmarked_keys, ';', 'and')}): "
+    square = nil
+    loop do
+      square = gets.chomp.to_i
+      break if board.unmarked_keys.include?(square)
+      puts "Sorry, #{@name}, this is not a valid choice!"
+    end
+    board[square] = @marker
+  end
+
+  def joinor(arr, separator = ",", concat_word = "or")
+    return arr[0].to_s if arr.size == 1
+    last_element = arr.pop.to_s
+    arr.join("#{separator} ") + " #{concat_word} #{last_element}"
+  end
+end
+
+class Computer < Player
+  COMPUTER_MARKER_CHOICES = ("A".."Z").to_a
+  COMPUTER_NAME_OPTIONS = ["Tom", "Robert", "Sigfried", "Lionel", "Tito"].freeze
+
+  attr_accessor :name
+
+  def initialize(human_marker)
+    set_name
+    choose_marker(human_marker)
+  end
+
+  def set_name
+    @name = COMPUTER_NAME_OPTIONS.sample
+  end
+
+  def move(board, human_marker)
+    board[board.find_best_move(@marker, human_marker)] \
+      = @marker
+  end
+
+  def choose_marker(human_marker)
+    loop do
+      @marker = COMPUTER_MARKER_CHOICES.sample
+      break if @marker != human_marker.upcase
+    end
   end
 end
 
 class TTTGame
   DEFAULT_COMPUTER_MARKER = "O".freeze
   DEFAULT_HUMAN_MARKER = "X".freeze
-  COMPUTER_NAME_OPTIONS = ["Tom", "Robert", "Sigfried", "Lionel", "Tito"].freeze
+
   MAX_GAMES = 2
 
   attr_accessor :board, :human, :computer, \
@@ -192,10 +281,9 @@ class TTTGame
   def initialize
     @board = Board.new
     display_welcome_message
-    assign_human_marker
-    @first_to_move = human_marker
-    @human = Player.new(human_marker, human_name)
-    @computer = Player.new(computer_marker, COMPUTER_NAME_OPTIONS.sample)
+    @human = Human.new
+    @computer = Computer.new(@human.marker)
+    @first_to_move = @human.marker
     @current_marker = @first_to_move
     @games_won = { human: 0, computer: 0 }
   end
@@ -233,43 +321,8 @@ class TTTGame
     @games_won.value?(MAX_GAMES)
   end
 
-  def assign_human_marker
-    @human_marker = choose_desired_marker
-
-    @computer_marker = if @human_marker == DEFAULT_COMPUTER_MARKER
-                         DEFAULT_HUMAN_MARKER
-                       else
-                         DEFAULT_COMPUTER_MARKER
-                       end
-  end
-
-  def choose_desired_marker
-    marker = nil
-    loop do
-      puts "Enter any single-character marker you want:"
-      marker = gets.chomp.to_s
-      break if valid_marker?(marker)
-      puts "Your marker must be a single character!"
-    end
-    marker
-  end
-
-  def valid_marker?(marker)
-    marker.size == 1
-  end
-
   def display_welcome_message
     puts "Welcome to tic tac toe"
-    choose_human_name
-  end
-
-  def choose_human_name
-    loop do
-      puts "Please enter your name:"
-      @human_name = gets.chomp.to_s
-      break if !@human_name.empty?
-      puts "You must enter at least 1 character!"
-    end
   end
 
   def display_goodbye_message
@@ -296,35 +349,13 @@ class TTTGame
     puts ""
   end
 
-  def joinor(arr, separator = ",", concat_word = "or")
-    return arr[0].to_s if arr.size == 1
-    last_element = arr.pop.to_s
-    arr.join("#{separator} ") + " #{concat_word} #{last_element}"
-  end
-
-  def human_moves
-    puts "Choose a square (#{joinor(board.unmarked_keys, ';', 'and')}): "
-    square = nil
-    loop do
-      square = gets.chomp.to_i
-      break if board.unmarked_keys.include?(square)
-      puts "Sorry, #{human.name}, this is not a valid choice!"
-    end
-    board[square] = human.marker
-  end
-
-  def computer_moves
-    board[board.find_best_move(@computer_marker, @human_marker)] \
-      = computer_marker
-  end
-
   def current_player_moves
-    if @current_marker == human_marker
-      human_moves
-      @current_marker = computer_marker
+    if @current_marker == human.marker
+      human.move(@board)
+      @current_marker = computer.marker
     else
-      computer_moves
-      @current_marker = human_marker
+      computer.move(@board, human.marker)
+      @current_marker = human.marker
     end
   end
 
