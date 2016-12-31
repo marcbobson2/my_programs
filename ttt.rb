@@ -6,19 +6,11 @@ module AIMoveLogic
   PROMISING_WIN_LINES = [2, 1].freeze
 
   def find_best_move(computer_marker, human_marker)
-    winning_move = check_for_winning_move(computer_marker)
-    return winning_move if winning_move
-
-    defend_against_winning_move = check_for_winning_move(human_marker)
-    return defend_against_winning_move if defend_against_winning_move
-
-    make_attacking_move = attack_or_defend?(computer_marker)
-    return make_attacking_move if make_attacking_move
-
-    make_defensive_move = attack_or_defend?(human_marker)
-    return make_defensive_move if make_defensive_move
-
-    choose_best_move_from_set(unmarked_keys)
+    check_for_winning_move(computer_marker) ||
+      check_for_winning_move(human_marker) ||
+      attack_or_defend?(computer_marker) ||
+      attack_or_defend?(human_marker) ||
+      choose_best_move_from_set(unmarked_keys)
   end
 
   private
@@ -189,9 +181,6 @@ end
 
 class Player
   attr_reader :marker, :name
-
-  def initialize
-  end
 end
 
 class Human < Player
