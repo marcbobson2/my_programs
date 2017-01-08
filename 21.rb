@@ -1,5 +1,5 @@
 module Display
-  def display_msg(msg, pad_before = true, pad_after = true)
+  def display_msg(msg, pad_before: true, pad_after: true)
     puts if pad_before
     puts msg
     puts if pad_after
@@ -10,12 +10,13 @@ module Display
   end
 
   def press_key_to_continue
-    display_msg("Press any key to continue.", true, false)
+    display_msg("Press any key to continue.", \
+                pad_before: true, pad_after: false)
     gets.chomp
   end
 end
 
-class Hand
+module Hand
   attr_accessor :cards
   def initialize
     remove_cards
@@ -25,7 +26,7 @@ class Hand
     @cards = []
   end
 
-  def value
+  def hand_total
     hand_total = 0
     has_aces = false
     @cards.each do |card|
@@ -43,7 +44,7 @@ class Hand
   end
 
   def busted?
-    value > 21
+    hand_total > 21
   end
 
   def to_s
@@ -53,7 +54,7 @@ class Hand
   private
 
   def numeric?(val)
-    val.class == ::Fixnum
+    val.is_a?(Fixnum)
   end
 
   def deal_with_aces(hand_total)
@@ -64,11 +65,16 @@ end
 
 class Participant
   include Display
-  attr_accessor :hand, :name
+  include Hand
+
+  attr_accessor :name
 
   def initialize
-    @hand = Hand.new
     @name = ""
+  end
+
+  def hit(deck)
+    @cards << deck.take_card
   end
 end
 
@@ -77,70 +83,52 @@ class Player < Participant
 
   def initialize
     super
-    @name = set_name
+    @name = input_name
     @games_won = 0
     @games_lost = 0
     @games_tied = 0
     quick_welcome
   end
 
-  def turn(deck, dealer)
-    loop do
-      if hit_or_stand? == "h"
-        clear
-        hit(deck)
-        show_hand
-        dealer.show_hand
-        if hand.busted?
-          break
-        end
-      else
-        stand
-        break
-      end
-    end
-  end
-
   def show_hand
     print name + ": "
-    hand.cards.each do |card|
+    @cards.each do |card|
       print card[0].to_s + card[1].to_s + " "
     end
-    puts format("%10d", hand.value)
+    puts format("%10d", hand_total)
   end
-
-  def hit(deck)
-    hand.cards << deck.take_card
-  end
-
-  private
 
   def stand
-    display_msg("Very well, you stand!", true, false)
+    display_msg("Very well, you stand!", pad_before: true, pad_after: false)
     press_key_to_continue
   end
 
-  def hit_or_stand?
-    display_msg("Do you want to hit or stand? (h or s)", true, false)
+  def hit_or_stand
+    display_msg("Do you want to hit or stand? (h or s)", \
+                pad_before: true, pad_after: false)
     decision = nil
     loop do
       decision = gets.chomp.downcase
       break if decision == "h" || decision == "s"
-      display_msg("you must enter either 'h' or 's'", false, false)
+      display_msg("you must enter either 'h' or 's'", \
+                  pad_before: false, pad_after: false)
     end
     decision
   end
 
-  def set_name
+  private
+
+  def input_name
     player_name = ""
     loop do
       puts "What's your name?"
       player_name = gets.chomp
-      break if player_name.size > 1 && player_name =~ /[a-zA-Z]/
-      puts "You must have more than 1 character in your name!" \
-        if player_name.size < 2
-      puts "Your name must contain at least 1 letter!" \
-        if player_name =~ /[^a-zA-Z]/
+      break if player_name.size > 1 && player_name !~ /\d/
+      if player_name.size < 2
+        puts "You must have more than 1 character in your name!"
+      else
+        puts "Your name cannot contain numbers!"
+      end
     end
     puts
     player_name
@@ -153,46 +141,20 @@ class Player < Participant
 end
 
 class Dealer < Participant
-  def initialize
-    super
-  end
-
-  def deal_starting_hands(player, deck)
-    2.times do |_|
-      player.hit(deck)
-      hit(deck)
-    end
-  end
-
-  def turn(deck, player)
-    loop do
-      break if hand.busted? || hand.value > 16
-      hit(deck)
-    end
-    player.show_hand
-    show_hand(true)
-  end
-
   # rubocop:disable Metrics/AbcSize
   def show_hand(end_of_game = false)
     print "Dealer: "
-    hand.cards.each do |card|
-      if hand.cards.index(card).zero? && !end_of_game
+    @cards.each do |card|
+      if @cards.index(card).zero? && !end_of_game
         print "?? "
       else
         print card[0].to_s + card[1].to_s + " "
       end
     end
-    puts format("%10d", hand.value) if end_of_game
-    puts
+    puts format("%10d", hand_total) if end_of_game
+    puts if !end_of_game
   end
   # rubocop:enable Metrics/AbcSize
-
-  private
-
-  def hit(deck)
-    hand.cards << deck.take_card
-  end
 end
 
 class Deck
@@ -233,65 +195,94 @@ class Game
       deal_starting_cards
       show_initial_cards
       player_turn
-      dealer_turn if !@player.hand.busted?
+      dealer_turn unless @player.busted?
       show_results
-      break if quit?
+      update_scores
+      if quit?
+        display_msg("Thanks for playing, #{@player.name}!", \
+                    pad_before: true, pad_after: false)
+        break
+      end
     end
   end
 
   private
 
+  def player_turn
+    loop do
+      if @player.hit_or_stand == "h"
+        clear
+        @player.hit(@deck)
+        show_hands
+        break if @player.busted?
+      else
+        @player.stand
+        break
+      end
+    end
+  end
+
+  def show_hands(show_all_cards: false)
+    @player.show_hand
+    @dealer.show_hand(show_all_cards)
+  end
+
   def set_up
     @deck.create_deck
-    @player.hand.remove_cards
-    @dealer.hand.remove_cards
+    @player.remove_cards
+    @dealer.remove_cards
   end
 
   def quit?
-    display_msg(QUIT_MSG, true, false)
+    display_msg(QUIT_MSG, pad_before: true, pad_after: false)
     val = gets.chomp.to_s.upcase
     return false if val != "Q"
-    display_msg("Thanks for playing, #{@player.name}!", true, false)
     true
   end
 
   def show_results
     if player_won?
+      display_msg("You won!", pad_before: true, pad_after: false)
+    elsif player_lost?
+      display_msg("You lost!", pad_before: true, pad_after: false)
+    else
+      display_msg("It's a tie!", pad_before: true, pad_after: false)
+    end
+  end
+
+  def update_scores
+    if player_won?
       @player.games_won += 1
-      display_msg("You won!", false, false)
     elsif player_lost?
       @player.games_lost += 1
-      display_msg("You lost!", false, false)
     else
       @player.games_tied += 1
-      display_msg("It's a tie!", false, false)
     end
   end
 
   def player_lost?
-    @player.hand.busted? ||
-      (@dealer.hand.value > @player.hand.value && !@dealer.hand.busted?)
+    @player.busted? ||
+      (@dealer.hand_total > @player.hand_total && !@dealer.busted?)
   end
 
   def player_won?
-    @dealer.hand.busted? ||
-      (@player.hand.value > @dealer.hand.value && !@player.hand.busted?)
+    @dealer.busted? ||
+      (@player.hand_total > @dealer.hand_total && !@player.busted?)
   end
 
   def show_initial_cards
     clear
     show_score
-    @player.show_hand
-    @dealer.show_hand(false)
-  end
-
-  def player_turn
-    @player.turn(@deck, @dealer)
+    show_hands
   end
 
   def dealer_turn
     clear
-    @dealer.turn(@deck, @player)
+    loop do
+      break if @dealer.busted? || @dealer.hand_total > 16
+      @dealer.hit(@deck)
+    end
+    show_hands(show_all_cards: true)
   end
 
   def show_score
@@ -299,18 +290,21 @@ class Game
     player_losses = "Losses: #{@player.games_lost}"
     player_ties = "Ties: #{@player.games_tied}"
     display_msg("Player Score-->  #{player_wins} #{player_losses}\
-  #{player_ties}", false, true)
+  #{player_ties}", pad_before: false, pad_after: true)
   end
 
   def hand_total(player_type)
     case player_type
-    when :player then @player.hand.value
-    when :dealer then @dealer.hand.value
+    when :player then @player.hand_total
+    when :dealer then @dealer.hand_total
     end
   end
 
   def deal_starting_cards
-    @dealer.deal_starting_hands(@player, @deck)
+    2.times do
+      @player.hit(@deck)
+      @dealer.hit(@deck)
+    end
   end
 end
 
