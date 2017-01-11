@@ -10,8 +10,7 @@ module Display
   end
 
   def press_key_to_continue
-    display_msg("Press any key to continue.", \
-                pad_before: true, pad_after: false)
+    display_msg("Press any key to continue.", pad_after: false)
     gets.chomp
   end
 end
@@ -99,19 +98,17 @@ class Player < Participant
   end
 
   def stand
-    display_msg("Very well, you stand!", pad_before: true, pad_after: false)
+    display_msg("Very well, you stand!", pad_after: false)
     press_key_to_continue
   end
 
   def hit_or_stand
-    display_msg("Do you want to hit or stand? (h or s)", \
-                pad_before: true, pad_after: false)
+    display_msg("Do you want to hit or stand? (h or s)", pad_after: false)
     decision = nil
     loop do
       decision = gets.chomp.downcase
       break if decision == "h" || decision == "s"
-      display_msg("you must enter either 'h' or 's'", \
-                  pad_before: false, pad_after: false)
+      display_msg("you must enter either 'h' or 's'", pad_after: false)
     end
     decision
   end
@@ -199,8 +196,7 @@ class Game
       show_results
       update_scores
       if quit?
-        display_msg("Thanks for playing, #{@player.name}!", \
-                    pad_before: true, pad_after: false)
+        display_msg("Thanks for playing, #{@player.name}!", pad_after: false)
         break
       end
     end
@@ -234,7 +230,7 @@ class Game
   end
 
   def quit?
-    display_msg(QUIT_MSG, pad_before: true, pad_after: false)
+    display_msg(QUIT_MSG, pad_after: false)
     val = gets.chomp.to_s.upcase
     return false if val != "Q"
     true
@@ -242,11 +238,11 @@ class Game
 
   def show_results
     if player_won?
-      display_msg("You won!", pad_before: true, pad_after: false)
+      display_msg("You won!", pad_after: false)
     elsif player_lost?
-      display_msg("You lost!", pad_before: true, pad_after: false)
+      display_msg("You lost!", pad_after: false)
     else
-      display_msg("It's a tie!", pad_before: true, pad_after: false)
+      display_msg("It's a tie!", pad_after: false)
     end
   end
 
@@ -290,7 +286,7 @@ class Game
     player_losses = "Losses: #{@player.games_lost}"
     player_ties = "Ties: #{@player.games_tied}"
     display_msg("Player Score-->  #{player_wins} #{player_losses}\
-  #{player_ties}", pad_before: false, pad_after: true)
+  #{player_ties}", pad_after: true)
   end
 
   def hand_total(player_type)
