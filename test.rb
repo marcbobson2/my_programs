@@ -1,82 +1,154 @@
-module Moveable
-  attr_accessor :speed, :heading, :fuel_capacity, :fuel_efficiency
-
-  def range
-    fuel_capacity * fuel_efficiency
+class Todo
+  DONE_MARKER = "X"
+  UNDONE_MARKER = " "
+  
+  attr_accessor :title, :description, :done
+  
+  def initialize (title, description = "")
+    @title = title
+    @description = description
+    @done = false
+  end
+  
+  def done!
+    self.done = true
+  end
+  
+  def done?
+    done
+  end
+  
+  def undone!
+    self.done = false
+  end
+  
+  def to_s
+    "[#{done? ? DONE_MARKER : UNDONE_MARKER}] #{title}"
   end
 end
 
-class WheeledVehicle
-  include Moveable
+class TodoList
+  attr_accessor :title
   
-
-  def initialize(tire_array, km_traveled_per_liter, liters_of_fuel_capacity)
-    @tires = tire_array
-    self.fuel_efficiency = km_traveled_per_liter
-    self.fuel_capacity = liters_of_fuel_capacity
+  def initialize(title)
+    @title = title
+    @todos = []
   end
-
-  def tire_pressure(tire_index)
-    @tires[tire_index]
+  
+  def add(todo)
+    raise TypeError, "You can only add to-do items to this list" unless todo.instance_of? Todo
+    @todos << todo
   end
+  alias_method :<<, :add
 
-  def inflate_tire(tire_index, pressure)
-    @tires[tire_index] = pressure
+  
+  def print
+    puts @todos
   end
-
+  
+  def size
+    @todos.size
+  end
+  
+  def first
+    @todos[0]
+  end
+  
+  def last
+    @todos[-1]
+  end
+  
+  def item_at(idx)
+    @todos.fetch(idx)
+  end
+  
+  def mark_done_at(idx)
+    @todos.fetch(idx).done!
+  end
+  
+  def mark_undone_at(idx)
+    @todos.fetch(idx).undone!
+  end
+  
+  def shift
+    return "no items to remove" if @todos.empty?
+    @todos.shift
+  end
+  
+  def pop
+    return "no items to pop" if @todos.empty?
+    @todos.pop
+  end
+  
+  def remove_at(idx)
+    @todos.delete_at(@todos.index(@todos.fetch(idx)))
+  end
+  
+  def to_s
+  # iterate through each item in the list and print
+  @todos.each {|item| puts item }
+  end
+  
+  def each
+    0.upto(@todos.size - 1) { |item| yield(@todos[item]) }
+    self
+  end
+  
+  def select
+    result = TodoList.new("Done List")
+    @todos.each do |item|
+      result.add(item) if yield(item)
+    end
+    result
+  end
+  
+  def find_by_title(title)
+    select { |todo| todo.title == title }.first
+  end
+  
+  def all_done
+    select { |todo| todo.done? }
+  end
+  
+  def all_not_done
+    select {|todo| !todo.done? }
+  end
+  
+  def mark_done(title)
+    each { |todo| todo.title == title }.first.done!
+  end
+  
+  def mark_all_done
+    each { |todo| todo.done! }
+  end
+  
+  def mark_all_undone
+    each {|todo| todo.undone!}
+  end
   
 end
 
-class Auto < WheeledVehicle
-  
-  def initialize(tire_array, km_traveled_per_liter, liters_of_fuel_capacity)
-    # 4 tires are various tire pressures
-    super(tire_array, km_traveled_per_liter, liters_of_fuel_capacity)
-  end
-end
-
-class Motorcycle < WheeledVehicle
-  
-  def initialize(tire_array, km_traveled_per_liter, liters_of_fuel_capacity)
-    # 2 tires are various tire pressures
-    super(tire_array, km_traveled_per_liter, liters_of_fuel_capacity)
-  end
-end
+todo1 = Todo.new("Buy milk")
+todo2 = Todo.new("Clean room")
+todo3 = Todo.new("Go to gym")
 
 
-class Boat
-  include Moveable
-  
-  attr_accessor :propeller_count, :hull_count
-  
-  def initialize(num_propellers, num_hulls, km_traveled_per_liter, liters_of_fuel_capacity)
-    self.fuel_efficiency = km_traveled_per_liter
-    self.fuel_capacity = liters_of_fuel_capacity
-    self.hull_count = num_hulls
-    self.propeller_count = num_propellers
-  end
-  
-   def range
-    super + 10
-  end
-end
+list = TodoList.new("Today's Todos")
+list.add(todo1)
+list.add(todo2)
+list.add(todo3)
 
-class MotorBoat < Boat
-  def initialize(km_traveled_per_liter, liters_of_fuel_capacity)
-    super(1, 1, km_traveled_per_liter, liters_of_fuel_capacity)
-  end
-  
-  
-end
+puts list.mark_all_undone
 
-class Catamaran < Boat
 
-end
 
-chevy = Auto.new([25,25,25,25], 30, 30 )
-p chevy.range
-cycle = Motorcycle.new([26,26], 31, 31)
-p cycle.range
 
-ocean = Catamaran.new(1,2,60, 60.0)
-p ocean.range
+
+
+
+
+
+
+
+
+
