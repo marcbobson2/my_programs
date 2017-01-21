@@ -85,8 +85,10 @@ class TodoList
   end
   
   def to_s
-  # iterate through each item in the list and print
-  @todos.each {|item| puts item }
+    output = "#{self.title}\n"
+    output << "----------------\n"
+    output << @todos.map(&:to_s).join("\n")
+    output
   end
   
   def each
@@ -138,7 +140,11 @@ list.add(todo1)
 list.add(todo2)
 list.add(todo3)
 
-puts list.mark_all_undone
+list.mark_all_done
+
+
+puts list
+
 
 
 
