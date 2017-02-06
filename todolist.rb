@@ -35,7 +35,7 @@ class TodoList
     @todos = []
   end
   
-  def add(todo)
+  def add(todo) # Done
     raise TypeError, "You can only add to-do items to this list" unless todo.instance_of? Todo
     @todos << todo
   end
@@ -43,60 +43,59 @@ class TodoList
 
   
   def print
-    puts @todos
+   puts @todos
   end
   
-  def size
+  def size # Done
     @todos.size
   end
   
-  def first
+  def first # Done
     @todos[0]
   end
   
-  def last
+  def last # Done
     @todos[-1]
   end
   
-  def item_at(idx)
+  def item_at(idx) # Done
     @todos.fetch(idx)
   end
   
-  def mark_done_at(idx)
+  def mark_done_at(idx) # Done
     @todos.fetch(idx).done!
   end
   
-  def mark_undone_at(idx)
+  def mark_undone_at(idx) # Done
     @todos.fetch(idx).undone!
   end
   
-  def shift
+  def shift # Done
     return "no items to remove" if @todos.empty?
     @todos.shift
   end
   
-  def pop
+  def pop # Done
     return "no items to pop" if @todos.empty?
     @todos.pop
   end
   
-  def remove_at(idx)
+  def remove_at(idx) # Done
     @todos.delete_at(@todos.index(@todos.fetch(idx)))
   end
   
-  def to_s
-    output = "#{self.title}\n"
-    output << "----------------\n"
+  def to_s #Done
+    output = "---- Today's Todos ----\n"
     output << @todos.map(&:to_s).join("\n")
     output
   end
   
-  def each
+  def each #Done
     0.upto(@todos.size - 1) { |item| yield(@todos[item]) }
     self
   end
   
-  def select
+  def select #done
     result = TodoList.new("Done List")
     @todos.each do |item|
       result.add(item) if yield(item)
@@ -104,29 +103,38 @@ class TodoList
     result
   end
   
-  def find_by_title(title)
+  def find_by_title(title) #done
     select { |todo| todo.title == title }.first
   end
   
-  def all_done
+  def all_done #done
     select { |todo| todo.done? }
   end
   
-  def all_not_done
+  def done? # Done
+    @todos.all? { |todo| todo.done? }
+  end
+  
+  def all_not_done # done
     select {|todo| !todo.done? }
   end
   
-  def mark_done(title)
+  def mark_done(title) #done
     each { |todo| todo.title == title }.first.done!
   end
   
-  def mark_all_done
+  def mark_all_done # Done
     each { |todo| todo.done! }
   end
   
-  def mark_all_undone
+  def mark_all_undone #done
     each {|todo| todo.undone!}
   end
+  
+  def to_a # Done
+    @todos
+  end
+
   
 end
 
@@ -141,9 +149,9 @@ list.add(todo2)
 list.add(todo3)
 
 list.mark_all_done
+list.print
 
 
-puts list
 
 
 
