@@ -20,9 +20,7 @@ class Phrase
   end
   
   def word_count
-    freq_hash = Hash.new(0)
-    @word_arr.each { |word| freq_hash[word] += 1 }
-    freq_hash
+    @word_arr.each_with_object(Hash.new(0)) { |word, freq_hash| freq_hash[word] += 1 }
   end
     
     
