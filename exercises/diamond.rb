@@ -1,12 +1,6 @@
 module Diamond
   def self.make_diamond(input)
     return (input + "\n") if input == "A"
-    build_master(input)
-    #puts print_row(input, 5)
-    #puts print_row(input.succ, 4)
-  end
-
-  def self.build_master(input)
     result = []
     result = build_top(input)
     result.push(result[0..result.size - 2].reverse).flatten.join
